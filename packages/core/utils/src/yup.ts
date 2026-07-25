@@ -69,11 +69,16 @@ yup.addMethod(
     return this.test('unique', message, function unique(list) {
       const errors: yup.ValidationError[] = [];
 
+      // Count occurrences of each property value once, so the duplicate check below is
+      // O(list) instead of a list.filter scan per element (O(list²) otherwise).
+      const valueCounts = new Map<unknown, number>();
+      list?.forEach((element) => {
+        const value = get(propertyName, element);
+        valueCounts.set(value, (valueCounts.get(value) ?? 0) + 1);
+      });
+
       list?.forEach((element, index) => {
-        const sameElements = list.filter(
-          (e) => get(propertyName, e) === get(propertyName, element)
-        );
-        if (sameElements.length > 1) {
+        if ((valueCounts.get(get(propertyName, element)) ?? 0) > 1) {
           errors.push(
             this.createError({
               path: `${this.path}[${index}].${propertyName}`,
